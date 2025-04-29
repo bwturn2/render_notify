@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify
 import os
-import datetime
+import json
+from datetime import datetime
 
 app = Flask(__name__)
 
@@ -14,14 +15,18 @@ def health_check():
 
 @app.route('/notify', methods=['POST'])
 def notify():
-    data = request.get_json()
-
-    # Log event to file
-    with open('events.log', 'a') as f:
-        timestamp = datetime.datetime.now().isoformat()
-        f.write(f"{timestamp} - Event: {data.get('event')} - Message: {data.get('message')}\n")
-
-    return jsonify({'status': 'received'}), 200
+    data = request.json
+    log_entry = {
+        "timestamp": datetime.utcnow().isoformat(),
+        "event": data.get("event"),
+        "message": data.get("message")
+    }
+    
+    # Write log entry to events.log
+    with open("events.log", "a") as log_file:
+        log_file.write(json.dumps(log_entry) + "\n")
+    
+    return jsonify({"status": "received"})
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
