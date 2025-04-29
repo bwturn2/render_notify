@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify
+from datetime import datetime
 import os
 import json
-from datetime import datetime
 
 app = Flask(__name__)
 
@@ -15,24 +15,39 @@ def health_check():
 
 @app.route('/notify', methods=['POST'])
 def notify():
-    data = request.json
+    data = request.get_json()
     log_entry = {
         "timestamp": datetime.utcnow().isoformat(),
-        "event": data.get("event"),
-        "message": data.get("message")
+        "event": data.get("event", "unknown"),
+        "message": data.get("message", "")
     }
-    with open("events.log", "a") as log_file:
-        log_file.write(json.dumps(log_entry) + "\n")
+    with open("events.log", "a") as f:
+        f.write(json.dumps(log_entry) + "\n")
     return jsonify({"status": "received"})
 
 @app.route('/logs', methods=['GET'])
 def get_logs():
-    try:
-        with open("events.log", "r") as f:
-            log_data = f.readlines()
-        return jsonify({"logs": log_data})
-    except FileNotFoundError:
+    if not os.path.exists("events.log"):
         return jsonify({"error": "Log file not found"}), 404
+    with open("events.log", "r") as f:
+        lines = f.readlines()
+        logs = [json.loads(line.strip()) for line in lines]
+    return jsonify({"logs": logs})
+
+@app.route('/webhook', methods=['POST'])
+def webhook():
+    try:
+        data = request.get_json()
+        log_entry = {
+            "timestamp": datetime.utcnow().isoformat(),
+            "event": "webhook_event",
+            "data": data
+        }
+        with open("events.log", "a") as f:
+            f.write(json.dumps(log_entry) + "\n")
+        return jsonify({"status": "webhook received"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
