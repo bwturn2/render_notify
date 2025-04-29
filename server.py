@@ -1,5 +1,6 @@
-from flask import Flask, request
+from flask import Flask, request, jsonify
 import os
+import datetime
 
 app = Flask(__name__)
 
@@ -13,9 +14,14 @@ def health_check():
 
 @app.route('/notify', methods=['POST'])
 def notify():
-    data = request.json
-    print("Notification received:", data)
-    return {"status": "success", "message": "Notification received"}, 200
+    data = request.get_json()
+
+    # Log event to file
+    with open('events.log', 'a') as f:
+        timestamp = datetime.datetime.now().isoformat()
+        f.write(f"{timestamp} - Event: {data.get('event')} - Message: {data.get('message')}\n")
+
+    return jsonify({'status': 'received'}), 200
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
