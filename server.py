@@ -21,12 +21,18 @@ def notify():
         "event": data.get("event"),
         "message": data.get("message")
     }
-    
-    # Write log entry to events.log
     with open("events.log", "a") as log_file:
         log_file.write(json.dumps(log_entry) + "\n")
-    
     return jsonify({"status": "received"})
+
+@app.route('/logs', methods=['GET'])
+def get_logs():
+    try:
+        with open("events.log", "r") as f:
+            log_data = f.readlines()
+        return jsonify({"logs": log_data})
+    except FileNotFoundError:
+        return jsonify({"error": "Log file not found"}), 404
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
